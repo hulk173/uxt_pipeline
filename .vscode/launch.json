@@ -1,0 +1,50 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run FastAPI (uvicorn)",
+      "type": "python",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["api_main:app", "--reload", "--port", "8000"],
+      "jinja": true,
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    },
+    {
+      "name": "Run Streamlit App",
+      "type": "python",
+      "request": "launch",
+      "program": "streamlit",
+      "args": ["run", "app_streamlit.py"],
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    },
+    {
+      "name": "Run CLI example (optional)",
+      "type": "python",
+      "request": "launch",
+      "module": "uxt_pipeline.cli",
+      "args": [".", "--out", "uxt_pipeline/results/out.jsonl"],
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Run API + UI",
+      "configurations": ["Run FastAPI (uvicorn)", "Run Streamlit App"],
+      "stopAll": true,
+      "preLaunchTask": ""
+    }
+  ]
+}

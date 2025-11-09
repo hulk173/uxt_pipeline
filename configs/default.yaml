@@ -1,0 +1,28 @@
+# Параметри пайплайна та пошуку
+chunk:
+  size: 800
+  overlap: 100
+  by_titles: true
+
+normalize:
+  dedupe_spaces: true
+  ocr_fixes: true
+  lemmatize: false
+  lang: auto  # auto | en | uk | ru
+
+embeddings:
+  backend: sentence_transformers  # sentence_transformers | e5 | tfidf
+  model_name: "sentence-transformers/all-MiniLM-L6-v2"
+  batch_size: 64
+  device: "cpu"
+
+index:
+  engine: faiss  # faiss | hnsw | numpy
+  dim: 384       # узгодити з model_name
+  store_dir: ".index"
+  ef_construction: 200
+  M: 32
+  nprobe: 10
+
+search:
+  top_k: 10
