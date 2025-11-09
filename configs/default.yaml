@@ -1,28 +1,33 @@
-# Параметри пайплайна та пошуку
-chunk:
-  size: 800
-  overlap: 100
-  by_titles: true
+# configs/default.yaml
+ingest:
+  strategy: fast
+  ocr_languages: "eng+ukr"
+chunking:
+  max_chars: 1200
+  overlap: 150
+  join_same_type: true
+  min_text_chars: 20
+  strip_whitespace: true
 
-normalize:
-  dedupe_spaces: true
-  ocr_fixes: true
-  lemmatize: false
-  lang: auto  # auto | en | uk | ru
 
-embeddings:
-  backend: sentence_transformers  # sentence_transformers | e5 | tfidf
-  model_name: "sentence-transformers/all-MiniLM-L6-v2"
-  batch_size: 64
-  device: "cpu"
+export:
+  jsonl_path: "data/out/chunks.jsonl"
+  parquet_path: "data/out/chunks.parquet"
+  sqlite_path: "data/out/chunks.sqlite"
+  table_name: "chunks"
 
 index:
-  engine: faiss  # faiss | hnsw | numpy
-  dim: 384       # узгодити з model_name
-  store_dir: ".index"
-  ef_construction: 200
-  M: 32
-  nprobe: 10
+  backend: "faiss"          # faiss | sklearn
+  model_name: "sentence-transformers/all-MiniLM-L6-v2"
+  dim: 384                  # під all-MiniLM-L6-v2
+  top_k: 5
+  index_path: "data/out/index.faiss"
+  meta_path: "data/out/index_meta.json"
 
-search:
-  top_k: 10
+api:
+  host: "0.0.0.0"
+  port: 8000
+  cors_origins: ["*"]
+
+ui:
+  page_size: 100

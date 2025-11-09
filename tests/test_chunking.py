@@ -1,22 +1,14 @@
-from uxt_pipeline.core import chunk
-from uxt_pipeline.types import Element
+# tests/test_chunking.py
+from uxt_pipeline.transform.chunker import semantic_chunk
 
-def test_title_starts_new_chunk():
-    els = [
-        Element(type="Title", text="Розділ 1"),
-        Element(type="Text", text="abc " * 50),
-        Element(type="Title", text="Розділ 2"),
-        Element(type="Text", text="xyz " * 50),
-    ]
-    ch = chunk(els, size=60, overlap=0)
-    # має бути щонайменше 2 чанки (по розділах)
-    assert len(ch) >= 2
-    assert "Розділ 1" in " ".join(ch[0].text.split()[:10])
-
-def test_table_kept_as_block():
-    els = [
-        Element(type="Table", text="a,b,c\n1,2,3\n4,5,6"),
-    ]
-    ch = chunk(els, size=100, overlap=0)
-    assert len(ch) == 1
-    assert "1,2,3" in ch[0].text
+def test_chunking_merges_and_splits():
+    doc = {
+        "doc_id": "x",
+        "elements": [
+            {"type": "Title", "text":"A", "meta":{}},
+            {"type": "NarrativeText", "text":"hello " * 300, "meta":{}},
+        ],
+    }
+    chunks = semantic_chunk(doc, max_chars=200, overlap=50)
+    assert len(chunks) > 1
+    assert all(c.text for c in chunks)
