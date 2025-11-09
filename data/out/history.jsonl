@@ -1,0 +1,2 @@
+{"time": "2025-11-09T22:28:26.845210", "event": "ingest_queued", "payload": {"job_id": "2d3fae0cf53d47e9944ad5bf6002ec0f", "doc_id": "-304__________NO_SQL_docx", "file": "Оліфіренко К.А., ІН-304, Реферат_NO_SQL.docx"}}
+{"time": "2025-11-09T22:28:44.015382", "event": "ingest_done", "payload": {"job_id": "2d3fae0cf53d47e9944ad5bf6002ec0f", "doc_id": "-304__________NO_SQL_docx", "chunks": 29}}
