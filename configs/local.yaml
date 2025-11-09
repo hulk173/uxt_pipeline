@@ -1,0 +1,13 @@
+ingest:
+  strategy: hi_res
+  ocr_languages: ukr
+chunking:
+  max_chars: 1200
+  overlap: 150
+  join_same_type: true
+  min_text_chars: 20
+  strip_whitespace: false
+index:
+  backend: sklearn
+  model_name: sentence-transformers/all-MiniLM-L6-v2
+  top_k: 5

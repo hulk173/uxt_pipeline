@@ -1,73 +1,104 @@
 # uxt_pipeline/index/build_index.py
 from __future__ import annotations
-from typing import List
+
+from typing import List, Tuple, Any
+from pathlib import Path
 import json
-import os
 import numpy as np
+
 from uxt_pipeline.models import Chunk
 from uxt_pipeline.utils import ensure_dir
+from sentence_transformers import SentenceTransformer  # type: ignore
 
-def _load_encoder(model_name: str):
-    from sentence_transformers import SentenceTransformer
-    return SentenceTransformer(model_name)
+# FAISS може бути відсутній; оголошуємо як Any, щоб Pylance не лаявся
+try:
+    import faiss  # type: ignore
+    faiss = faiss  # type: Any
+    HAS_FAISS = True
+except Exception:
+    faiss = None  # type: ignore[assignment]
+    HAS_FAISS = False
+
+# sklearn як альтернатива
+try:
+    from sklearn.neighbors import NearestNeighbors  # type: ignore
+    import joblib  # type: ignore
+    HAS_SKLEARN = True
+except Exception:
+    HAS_SKLEARN = False
+
+
+def _embed_texts(texts: List[str], model_name: str) -> np.ndarray:
+    model = SentenceTransformer(model_name)
+    emb = model.encode(texts, convert_to_numpy=True, show_progress_bar=False)
+    return np.asarray(emb, dtype=np.float32)
+
+
+def _l2_normalize(x: np.ndarray) -> np.ndarray:
+    if x.size == 0:
+        return x
+    if HAS_FAISS and faiss is not None and hasattr(faiss, "normalize_L2"):
+        faiss.normalize_L2(x)  # type: ignore[attr-defined]
+        return x
+    norms = np.linalg.norm(x, axis=1, keepdims=True)
+    norms[norms == 0.0] = 1.0
+    return x / norms
+
+
+def _store_meta(chunks: List[Chunk], meta_path: str, model_name: str) -> None:
+    meta = {
+        "model_name": model_name,
+        "chunks": [c.model_dump() if hasattr(c, "model_dump") else c.__dict__ for c in chunks],
+    }
+    ensure_dir(Path(meta_path).parent.as_posix())
+    with open(meta_path, "w", encoding="utf-8") as f:
+        json.dump(meta, f, ensure_ascii=False)
+
 
 def _build_faiss_index(emb: np.ndarray, index_path: str) -> None:
-    import faiss  # <--- Додано імпорт всередині функції
-    ensure_dir(index_path)
-    index = faiss.IndexFlatIP(emb.shape[1])
-    faiss.normalize_L2(emb)
+    if not HAS_FAISS or faiss is None:
+        raise RuntimeError("FAISS is not installed. Install faiss-cpu to use the FAISS backend.")
+    index = faiss.IndexFlatIP(emb.shape[1])  # type: ignore[attr-defined]
     index.add(emb.astype(np.float32))
-    faiss.write_index(index, index_path)
+    ensure_dir(Path(index_path).parent.as_posix())
+    faiss.write_index(index, index_path)  # type: ignore[attr-defined]
 
 
 def _build_sklearn_index(emb: np.ndarray, index_path: str) -> None:
-    ensure_dir(index_path)
-    from sklearn.neighbors import NearestNeighbors
-    import joblib
-    nn = NearestNeighbors(n_neighbors=10, metric="cosine")
+    if not HAS_SKLEARN:
+        raise RuntimeError("scikit-learn is not installed.")
+    nn = NearestNeighbors(metric="cosine", algorithm="auto")
     nn.fit(emb)
+    ensure_dir(Path(index_path).parent.as_posix())
     joblib.dump(nn, index_path)
+
 
 def build_index(
     chunks: List[Chunk],
-    backend: str,
-    model_name: str,
-    index_path: str,
-    meta_path: str,
-) -> None:
-    # Порожній набір — пишемо «порожню» мету і прибираємо індекс
-    if not chunks:
-        ensure_dir(meta_path)
-        with open(meta_path, "w", encoding="utf-8") as f:
-            json.dump(
-                {"backend": backend, "model": model_name, "ids": [], "chunks": [], "shape": [0, 0]},
-                f,
-                ensure_ascii=False,
-            )
-        try:
-            if os.path.exists(index_path):
-                os.remove(index_path)
-        except Exception:
-            pass
-        return
+    *,
+    backend: str = "faiss",
+    model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
+    index_path: str = "data/out/index.faiss",
+    meta_path: str = "data/out/index_meta.json",
+    normalize: bool = True,
+) -> Tuple[str, str]:
+    texts = [c.text for c in chunks if (getattr(c, "text", "") or "").strip()]
+    if not texts:
+        _store_meta(chunks, meta_path, model_name)
+        ensure_dir(Path(index_path).parent.as_posix())
+        Path(index_path).write_bytes(b"")
+        return index_path, meta_path
 
-    texts = [c.text for c in chunks]
-    enc = _load_encoder(model_name)
-    emb = enc.encode(texts, batch_size=64, convert_to_numpy=True, show_progress_bar=False)
+    emb = _embed_texts(texts, model_name)
+    if normalize:
+        emb = _l2_normalize(emb)
 
-    if backend == "faiss":
+    if backend.lower() == "faiss":
         _build_faiss_index(emb, index_path)
-    else:
+    elif backend.lower() == "sklearn":
         _build_sklearn_index(emb, index_path)
+    else:
+        raise ValueError(f"Unknown index backend: {backend}")
 
-    # 🔒 JSON-safe метадані: використовуємо mode="json"
-    meta = {
-        "backend": backend,
-        "model": model_name,
-        "ids": [c.id for c in chunks],
-        "chunks": [c.model_dump(mode="json") for c in chunks],
-        "shape": list(emb.shape),
-    }
-    ensure_dir(meta_path)
-    with open(meta_path, "w", encoding="utf-8") as f:
-        json.dump(meta, f, ensure_ascii=False)
+    _store_meta(chunks, meta_path, model_name)
+    return index_path, meta_path
