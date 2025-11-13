@@ -1,4 +1,3 @@
-# scripts/run_ingest.py
 from pathlib import Path
 from uxt_pipeline.utils import load_config
 from uxt_pipeline.ingest.partitioner import partition_dir
@@ -29,7 +28,7 @@ def main():
             min_text_chars=cfg["chunking"]["min_text_chars"],
             strip_whitespace=cfg["chunking"]["strip_whitespace"],
         )
-        all_chunks.extend(chunks)
+        all_chunks.extend([c.model_dump() for c in chunks])
 
     export_jsonl(all_chunks, cfg["export"]["jsonl_path"])
     try:
@@ -40,10 +39,10 @@ def main():
 
     build_index(
         all_chunks,
+        out_dir=cfg["index"]["out_dir"],
         backend=cfg["index"]["backend"],
         model_name=cfg["index"]["model_name"],
-        index_path=cfg["index"]["index_path"],
-        meta_path=cfg["index"]["meta_path"],
+        normalize=cfg["index"]["normalize"],
     )
 
 if __name__ == "__main__":

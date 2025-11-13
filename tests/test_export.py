@@ -1,14 +1,13 @@
-# tests/test_export.py
+from typing import List
 from uxt_pipeline.models import Chunk
 from uxt_pipeline.storage.export_jsonl import export_jsonl
 from uxt_pipeline.storage.export_parquet import export_parquet
 from uxt_pipeline.storage.export_sqlite import export_sqlite
-from datetime import datetime
 
-def _sample_chunks():
+def _sample_chunks() -> List[Chunk]:
     return [
-        Chunk(id="1", doc_id="d", chunk_id=0, type="Text", text="hello", meta={}, created_at=datetime.utcnow()),
-        Chunk(id="2", doc_id="d", chunk_id=1, type="Text", text="world", meta={}, created_at=datetime.utcnow()),
+        Chunk(id="1", doc_id="d", chunk_id=0, type="Text", text="hello", meta={}),
+        Chunk(id="2", doc_id="d", chunk_id=1, type="Text", text="world", meta={}),
     ]
 
 def test_exporters(tmp_path):

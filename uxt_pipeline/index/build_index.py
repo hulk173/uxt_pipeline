@@ -1,226 +1,167 @@
-# uxt_pipeline/index/build_index.py
 from __future__ import annotations
-
 import json
-import pickle
-from dataclasses import dataclass
-from datetime import datetime, date
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 import numpy as np
 
-# FAISS опційний
 try:
     import faiss  # type: ignore
-    HAS_FAISS = True
-except Exception:
-    HAS_FAISS = False
+except Exception:  # faiss optional
+    faiss = None  # type: ignore
 
-from sklearn.neighbors import NearestNeighbors  # type: ignore
+# -------------------------- utils --------------------------
 
-
-def ensure_dir(p: str | Path) -> None:
-    Path(p).mkdir(parents=True, exist_ok=True)
-
-
-def _json_serial(obj: Any) -> str:
-    if isinstance(obj, (datetime, date)):
-        return obj.isoformat()
-    return str(obj)
-
-
-def _l2_normalize(arr: np.ndarray) -> np.ndarray:
+def _to_numpy(x: Any) -> np.ndarray:
     """
-    Построчне L2-нормування. Безпечне до нульових векторів.
+    Robust conversion to np.ndarray[float32] from:
+    - torch.Tensor or list[torch.Tensor]
+    - list[list[float]] / list[np.ndarray] / np.ndarray
     """
-    if arr.ndim != 2:
-        raise ValueError("Expected 2D embeddings array")
-    norms = np.linalg.norm(arr, axis=1, keepdims=True)
+    try:
+        import torch  # type: ignore
+    except Exception:
+        torch = None  # type: ignore
+
+    if torch is not None and isinstance(x, torch.Tensor):  # single tensor
+        return x.detach().cpu().numpy().astype(np.float32, copy=False)
+
+    # list[Tensor] → stack
+    if torch is not None and isinstance(x, list) and x and isinstance(x[0], torch.Tensor):
+        arr = torch.stack(x).detach().cpu().numpy()
+        return arr.astype(np.float32, copy=False)
+
+    # list[...] or ndarray → asarray
+    return np.asarray(x, dtype=np.float32)
+
+def _l2_normalize(mat: np.ndarray) -> np.ndarray:
+    norms = np.linalg.norm(mat, axis=1, keepdims=True)
     norms[norms == 0.0] = 1.0
-    return arr / norms
+    return mat / norms
 
+# -------------------------- I/O ----------------------------
 
-@dataclass
-class BuiltIndexInfo:
-    backend: str
-    dim: int
-    count: int
-    index_path: str
-    meta_path: str
-    model_name: str
+def _save_meta(path: Path, meta: Dict[str, Any]) -> None:
+    path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
 
+def _load_meta(path: Path) -> Dict[str, Any]:
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+# -------------------------- API ----------------------------
 
 def build_index(
     chunks: List[Dict[str, Any]],
     out_dir: str,
-    backend: str = "faiss",
+    backend: str = "faiss",  # "faiss" | "sklearn"
     model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
     normalize: bool = True,
 ) -> Dict[str, Any]:
     """
-    Створює індекс у каталозі out_dir.
-    Очікується, що кожен chunk має {"id": str, "doc_id": str, "text": str}
+    Build vector index from chunks (each row must have fields: id, doc_id, text).
+    Writes:
+      - out_dir/index.faiss (if faiss)
+      - out_dir/meta.json   (mapping + settings)
+      - out_dir/emb.npy     (if sklearn)
+    Returns meta dict.
     """
-    ensure_dir(out_dir)
     out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
 
+    # texts & ids
     texts: List[str] = []
     ids: List[str] = []
     doc_ids: List[str] = []
-    for ch in chunks:
-        t = (ch.get("text") or "").strip()
+    for r in chunks:
+        t = (r.get("text") or "").strip()
         if not t:
             continue
         texts.append(t)
-        ids.append(str(ch.get("id", "")))
-        doc_ids.append(str(ch.get("doc_id", "")))
+        ids.append(str(r.get("id")))
+        doc_ids.append(str(r.get("doc_id")))
 
     if not texts:
-        raise ValueError("No non-empty texts in chunks to build index")
+        raise RuntimeError("No texts to index")
 
-    # 1) Ембеддинги
+    # embeddings
     from sentence_transformers import SentenceTransformer
-    model = SentenceTransformer(model_name)
-    emb = model.encode(texts, convert_to_numpy=True, show_progress_bar=False).astype(np.float32)
-
-    # 2) L2-нормування (для cosine через IP у FAISS і для sklearn cosine)
+    mdl = SentenceTransformer(model_name)
+    embs_raw = mdl.encode(texts, convert_to_numpy=True, show_progress_bar=False)
+    X = _to_numpy(embs_raw)  # (N, D) float32
     if normalize:
-        emb = _l2_normalize(emb)
+        X = _l2_normalize(X)
 
-    dim = int(emb.shape[1])
+    dim = int(X.shape[1])
 
-    # 3) Побудова індексу
-    backend = (backend or "faiss").lower()
-    if backend not in {"faiss", "sklearn"}:
-        backend = "faiss"
-
-    index_path = str(out / ("index.faiss" if backend == "faiss" else "index.pkl"))
-    meta_path = str(out / "meta.json")
-
-    if backend == "faiss":
-        if not HAS_FAISS:
-            backend = "sklearn"  # fallback
-        else:
-            # cosine similarity через IP на нормованих векторах
-            index = faiss.IndexFlatIP(dim)
-            index.add(emb)  # type: ignore
-            faiss.write_index(index, index_path)
-
-    if backend == "sklearn":
-        nn = NearestNeighbors(n_neighbors=10, metric="cosine")
-        nn.fit((emb))
-        with open(index_path, "wb") as f:
-            pickle.dump({"nn": nn, "emb": emb}, f)
-
-    # 4) Метадані
     meta: Dict[str, Any] = {
         "backend": backend,
-        "model_name": model_name,
         "dim": dim,
-        "count": int(emb.shape[0]),
-        "ids": ids,
-        "doc_ids": doc_ids,
-        "created_at": datetime.now(),
+        "count": int(X.shape[0]),
+        "ids": ids,          # position ↔ id
+        "doc_ids": doc_ids,  # position ↔ doc_id
+        "model_name": model_name,
         "normalize": bool(normalize),
-        "index_path": index_path,
     }
-    with open(meta_path, "w", encoding="utf-8") as f:
-        json.dump(meta, f, ensure_ascii=False, default=_json_serial, indent=2)
 
-    return BuiltIndexInfo(
-        backend=backend,
-        dim=dim,
-        count=len(texts),
-        index_path=index_path,
-        meta_path=meta_path,
-        model_name=model_name,
-    ).__dict__
+    if backend == "faiss":
+        if faiss is None:
+            raise RuntimeError("faiss is not installed. Use backend='sklearn' or install faiss-cpu.")
+        index = faiss.IndexFlatIP(dim)  # cosine with normalized vectors
+        index.add(X)  # type: ignore
+        faiss.write_index(index, str(out / "index.faiss"))  # type: ignore
+    elif backend == "sklearn":
+        # save matrix for manual dot-product search
+        np.save(out / "emb.npy", X)
+    else:
+        raise ValueError("backend must be 'faiss' or 'sklearn'")
 
+    _save_meta(out / "meta.json", meta)
+    return meta
 
 def load_index(out_dir: str) -> Tuple[str, Any, Dict[str, Any]]:
     out = Path(out_dir)
-    meta_path = out / "meta.json"
-    if not meta_path.exists():
-        raise FileNotFoundError(f"meta.json not found in {out_dir}")
-    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    meta = _load_meta(out / "meta.json")
     backend = meta.get("backend", "faiss")
-    index_path = meta.get("index_path")
-
     if backend == "faiss":
-        if not HAS_FAISS:
-            raise RuntimeError("FAISS backend requested but faiss is not available")
-        index = faiss.read_index(index_path)
-        return backend, index, meta
-
-    with open(index_path, "rb") as f:
-        payload = pickle.load(f)
-    return backend, payload, meta
-
+        if faiss is None:
+            raise RuntimeError("faiss is not installed but meta expects faiss backend.")
+        index = faiss.read_index(str(out / "index.faiss"))  # type: ignore
+        return "faiss", index, meta
+    else:
+        X = np.load(out / "emb.npy")
+        return "sklearn", {"emb": _to_numpy(X)}, meta
 
 def search(out_dir: str, query: str, k: int = 5) -> List[Dict[str, Any]]:
-    backend, index_obj, meta = load_index(out_dir)
-
-    # encode query
+    backend, index, meta = load_index(out_dir)
     from sentence_transformers import SentenceTransformer
-    model = SentenceTransformer(meta["model_name"])
-    q = model.encode([query], convert_to_numpy=True).astype(np.float32)
+
+    model_name = meta.get("model_name", "sentence-transformers/all-MiniLM-L6-v2")
+    mdl = SentenceTransformer(model_name)
+    qv_raw = mdl.encode([query], convert_to_numpy=True, show_progress_bar=False)
+    qv = _to_numpy(qv_raw)  # (1, D)
     if meta.get("normalize", True):
-        q = _l2_normalize(q)
+        qv = _l2_normalize(qv)
 
     ids = meta.get("ids", [])
     doc_ids = meta.get("doc_ids", [])
 
     if backend == "faiss":
-        D, I = index_obj.search(q, k)  # (1, k)
-        idxs = I[0].tolist()
+        D, I = index.search(qv, k)  # type: ignore
         scores = D[0].tolist()
+        idxs = I[0].tolist()
     else:
-        nn = index_obj["nn"]
-        dist, idxs_arr = nn.kneighbors(q, n_neighbors=k)
-        idxs = idxs_arr[0].tolist()
-        # cosine distance -> similarity
-        scores = (1.0 - dist[0]).tolist()
+        X = index["emb"]  # (N, D)
+        scores = (X @ qv.T).ravel().tolist()  # cosine/IP
+        idxs = np.argsort(scores)[::-1][:k].tolist()
+        scores = [scores[i] for i in idxs]
 
-    results: List[Dict[str, Any]] = []
-    for rank, (i, s) in enumerate(zip(idxs, scores), start=1):
-        rid = ids[i] if i < len(ids) else ""
-        rdoc = doc_ids[i] if i < len(doc_ids) else ""
-        results.append({"rank": rank, "score": float(s), "id": rid, "doc_id": rdoc})
-    return results
-
-
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Build or query vector index")
-    sub = parser.add_subparsers(dest="cmd")
-
-    b = sub.add_parser("build")
-    b.add_argument("--chunks", type=str, required=True)
-    b.add_argument("--out", type=str, required=True)
-    b.add_argument("--backend", type=str, default="faiss", choices=["faiss", "sklearn"])
-    b.add_argument("--model", type=str, default="sentence-transformers/all-MiniLM-L6-v2")
-    b.add_argument("--no-normalize", action="store_true")
-
-    q = sub.add_parser("search")
-    q.add_argument("--out", type=str, required=True)
-    q.add_argument("--query", type=str, required=True)
-    q.add_argument("--k", type=int, default=5)
-
-    args = parser.parse_args()
-
-    if args.cmd == "build":
-        rows = [json.loads(s) for s in Path(args.chunks).read_text(encoding="utf-8").splitlines() if s.strip()]
-        info = build_index(
-            rows,
-            out_dir=args.out,
-            backend=args.backend,
-            model_name=args.model,
-            normalize=not args.no_normalize,
-        )
-        print(json.dumps(info, indent=2, ensure_ascii=False, default=_json_serial))
-    elif args.cmd == "search":
-        print(json.dumps(search(args.out, args.query, k=args.k), indent=2, ensure_ascii=False))
-    else:
-        parser.print_help()
+    out: List[Dict[str, Any]] = []
+    for rank, (i, s) in enumerate(zip(idxs, scores)):
+        if i < 0 or i >= len(ids):
+            continue
+        out.append({"rank": rank + 1, "id": ids[i], "doc_id": doc_ids[i], "score": float(s)})
+    return out

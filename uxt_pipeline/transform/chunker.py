@@ -1,8 +1,7 @@
-# uxt_pipeline/transform/chunker.py
 from typing import Dict, Any, List
+from itertools import groupby
 from uxt_pipeline.utils import make_id
 from uxt_pipeline.models import Chunk
-from itertools import groupby
 
 def _clean_text(s: str, strip_ws: bool = True) -> str:
     s = s.replace("\u00a0", " ")
@@ -19,7 +18,6 @@ def semantic_chunk(
     doc_id = doc["doc_id"]
     elements = doc["elements"]
 
-    # 1) можливе злиття «однакових типів»
     if join_same_type:
         merged = []
         for typ, grp in groupby(elements, key=lambda e: e["type"]):
@@ -30,14 +28,9 @@ def semantic_chunk(
                     buf_texts.append(t)
                     buf_metas.append(el.get("meta", {}))
             if buf_texts:
-                merged.append({
-                    "type": typ,
-                    "text": "\n".join(buf_texts),
-                    "meta": {"sources": buf_metas}
-                })
+                merged.append({"type": typ, "text": "\n".join(buf_texts), "meta": {"sources": buf_metas}})
         elements = merged
 
-    # 2) розбиття на вікна
     chunks: List[Chunk] = []
     cidx = 0
     for el in elements:
@@ -61,5 +54,5 @@ def semantic_chunk(
                 cidx += 1
             if end == len(text):
                 break
-            start = end - overlap  # з перекриттям
+            start = end - overlap
     return chunks

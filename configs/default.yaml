@@ -1,14 +1,13 @@
-# configs/default.yaml
 ingest:
-  strategy: fast
+  strategy: fast            # fast | hi_res
   ocr_languages: "eng+ukr"
+
 chunking:
   max_chars: 1200
   overlap: 150
   join_same_type: true
   min_text_chars: 20
   strip_whitespace: true
-
 
 export:
   jsonl_path: "data/out/chunks.jsonl"
@@ -17,17 +16,8 @@ export:
   table_name: "chunks"
 
 index:
-  backend: "faiss"          # faiss | sklearn
+  backend: "faiss"     # faiss | sklearn
   model_name: "sentence-transformers/all-MiniLM-L6-v2"
-  dim: 384                  # під all-MiniLM-L6-v2
   top_k: 5
-  index_path: "data/out/index.faiss"
-  meta_path: "data/out/index_meta.json"
-
-api:
-  host: "0.0.0.0"
-  port: 8000
-  cors_origins: ["*"]
-
-ui:
-  page_size: 100
+  normalize: true
+  out_dir: "data/out"  # директорія, де лежатимуть index.faiss/meta.json

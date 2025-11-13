@@ -1,4 +1,3 @@
-# uxt_pipeline/models.py
 from typing import Any, Dict, Optional, List
 from pydantic import BaseModel, Field
 from datetime import datetime

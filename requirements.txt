@@ -6,8 +6,21 @@ pandas==2.2.3
 pyarrow==17.0.0
 unstructured[all-docs]==0.15.8
 sentence-transformers==3.0.1
-faiss-cpu==1.8.0.post1    # якщо не ставиться на Windows - видали і використай sklearn
+faiss-cpu==1.8.0.post1     # якщо на Windows не ставиться — видали цей рядок і залиш backend=sklearn
 scikit-learn==1.5.2
 joblib==1.4.2
+tqdm==4.66.5
+pypdf==4.3.1
+bs4==0.0.2
+python-docx==1.1.2
 streamlit==1.39.0
 requests==2.32.3
+weasyprint==61.0           # опційно для PDF експорту з Streamlit (потрібні Cairo/Pango)
+langdetect==1.0.9
+umap-learn==0.5.6          # для вкладки Visualization
+plotly==5.24.1
+SQLAlchemy==2.0.36         # якщо використовуєш uxt_pipeline/db*.py
+pdfminer.six
+pdfplumber
+pytesseract
+

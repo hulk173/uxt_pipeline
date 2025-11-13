@@ -1,10 +1,8 @@
-# scripts/evaluate.py
 """
 Дуже простий каркас оцінки:
-- вимірює швидкість/сторінку та відсоток витягнутого тексту як len(parsed_text)/len(raw_text_ocr) (якщо еталон є).
-- Placeholder для додавання своїх метрик (Rouge-L etc.).
+- вимірює час/файл та середню довжину витягнутого тексту.
 """
-import time, json, statistics
+import time, statistics
 from pathlib import Path
 from uxt_pipeline.utils import load_config
 from uxt_pipeline.ingest.partitioner import _partition_one
@@ -21,11 +19,11 @@ def main():
             str(p),
             strategy=cfg["ingest"]["strategy"],
             ocr_languages=cfg["ingest"]["ocr_languages"],
-            skip_elements=cfg["ingest"]["skip_elements"],
-            include_metadata=cfg["ingest"]["include_metadata"],
+            skip_elements=cfg["ingest"].get("skip_elements"),
+            include_metadata=cfg["ingest"].get("include_metadata", True),
         )
         dt = time.time() - t0
-        txt = "\n".join([e["text"] for e in res["elements"] if e["text"]])
+        txt = "\n".join([e["text"] for e in res["elements"] if e.get("text")])
         speeds.append(dt)
         lengths.append(len(txt))
 

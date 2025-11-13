@@ -1,2 +1,24 @@
-{"time": "2025-11-09T22:28:26.845210", "event": "ingest_queued", "payload": {"job_id": "2d3fae0cf53d47e9944ad5bf6002ec0f", "doc_id": "-304__________NO_SQL_docx", "file": "Оліфіренко К.А., ІН-304, Реферат_NO_SQL.docx"}}
-{"time": "2025-11-09T22:28:44.015382", "event": "ingest_done", "payload": {"job_id": "2d3fae0cf53d47e9944ad5bf6002ec0f", "doc_id": "-304__________NO_SQL_docx", "chunks": 29}}
+{"time": "2025-11-13T18:47:37.331021", "event": "clear_outputs", "payload": {"ok": true}}
+{"time": "2025-11-13T18:47:46.147845", "event": "ingest_queued", "payload": {"job_id": "7ce70a720bc649f1aff561b21f54b23c", "doc_id": "1_docx", "file": "диплом частина 1.docx"}}
+{"time": "2025-11-13T18:47:47.612943", "event": "ingest_error", "payload": {"job_id": "7ce70a720bc649f1aff561b21f54b23c", "error": "No module named 'sentence_transformers'"}}
+{"time": "2025-11-13T18:47:55.830532", "event": "ingest_queued", "payload": {"job_id": "d105f07a3f1e4a5487639dc51c22de34", "doc_id": "1_docx", "file": "диплом частина 1.docx"}}
+{"time": "2025-11-13T18:47:57.390104", "event": "ingest_error", "payload": {"job_id": "d105f07a3f1e4a5487639dc51c22de34", "error": "No module named 'sentence_transformers'"}}
+{"time": "2025-11-13T18:50:53.463097", "event": "ingest_queued", "payload": {"job_id": "3d85878781984cc8b0951f48610ff1a3", "doc_id": "1_Jira_____________________403_docx", "file": "Лаб_1_Jira_Оліфіренко К.А., ІН_403.docx"}}
+{"time": "2025-11-13T18:50:53.781329", "event": "ingest_error", "payload": {"job_id": "3d85878781984cc8b0951f48610ff1a3", "error": "No module named 'sentence_transformers'"}}
+{"time": "2025-11-13T19:02:57.447904", "event": "ingest_queued", "payload": {"job_id": "ced648520d49462da33ef5f5c02f7ac7", "doc_id": "Microsoft_Word__2__docx", "file": "Документ Microsoft Word (2).docx"}}
+{"time": "2025-11-13T19:03:55.022837", "event": "ingest_done", "payload": {"job_id": "ced648520d49462da33ef5f5c02f7ac7", "doc_id": "Microsoft_Word__2__docx", "chunks_added": 5, "total_chunks": 319}}
+{"time": "2025-11-13T19:04:35.809895", "event": "ingest_queued", "payload": {"job_id": "122e0b038d3d44d68be46e589b2245f7", "doc_id": "1_docx", "file": "диплом частина 1.docx"}}
+{"time": "2025-11-13T19:04:53.065148", "event": "ingest_done", "payload": {"job_id": "122e0b038d3d44d68be46e589b2245f7", "doc_id": "1_docx", "chunks_added": 149, "total_chunks": 468}}
+{"time": "2025-11-13T19:08:31.349543", "event": "ask", "payload": {"q": "В чому суть розділа", "k": 5, "sources": 5, "score_min": 0.0, "lang_filter": ""}}
+{"time": "2025-11-13T19:09:44.504986", "event": "evaluate", "payload": {"q": "Проект\n", "k": 5, "hits": 0, "score_min": 0.0, "lang_filter": ""}}
+{"time": "2025-11-13T19:12:15.981697", "event": "ingest_queued", "payload": {"job_id": "7ae80c4bf2114057b3944ca396f27893", "doc_id": "1_docx", "file": "диплом частина 1.docx"}}
+{"time": "2025-11-13T19:12:39.357897", "event": "ingest_done", "payload": {"job_id": "7ae80c4bf2114057b3944ca396f27893", "doc_id": "1_docx", "chunks_added": 149, "total_chunks": 617}}
+{"time": "2025-11-13T19:15:07.194559", "event": "search", "payload": {"q": "методи ", "k": 5, "score_min": 0.03, "results": 5, "lang_filter": ""}}
+{"time": "2025-11-13T19:15:38.461782", "event": "ask", "payload": {"q": "В чому суть розділа", "k": 5, "sources": 5, "score_min": 0.0, "lang_filter": ""}}
+{"time": "2025-11-13T19:16:10.592233", "event": "evaluate", "payload": {"q": "Проект\n", "k": 5, "hits": 0, "score_min": 0.0, "lang_filter": ""}}
+{"time": "2025-11-13T19:16:40.009628", "event": "evaluate", "payload": {"q": "Державний торговельно-економічний університет\nКафедра комп’ютерних наук та інформаційних систем\nКВАЛІФІКАЦІЙНА РОБОТА\nна тему:\n«Метод обробки неструктурованих даних для вдосконалення систем аналізу тексту»\n", "k": 5, "hits": 0, "score_min": 0.0, "lang_filter": ""}}
+{"time": "2025-11-13T19:16:49.046487", "event": "evaluate", "payload": {"q": "Державний торговельно-економічний університет\nКафедра комп’ютерних наук та інформаційних систем\nКВАЛІФІКАЦІЙНА РОБОТА\nна тему:\n«Метод обробки неструктурованих даних для вдосконалення систем аналізу тексту»\n", "k": 14, "hits": 0, "score_min": 0.0, "lang_filter": ""}}
+{"time": "2025-11-13T19:17:07.639398", "event": "evaluate", "payload": {"q": "Державний торговельно-економічний університет\nКафедра комп’ютерних наук та інформаційних систем\nКВАЛІФІКАЦІЙНА РОБОТА\nна тему:\n«Метод обробки неструктурованих даних для вдосконалення систем аналізу тексту»\n", "k": 14, "hits": 4, "score_min": 0.0, "lang_filter": ""}}
+{"time": "2025-11-13T19:19:17.911915", "event": "clusters", "payload": {"n_clusters": 9, "count": 617, "lang_filter": ""}}
+{"time": "2025-11-13T19:40:37.737944", "event": "ingest_queued", "payload": {"job_id": "b5a1fc9d257c4d43b6907bea7bd40f1f", "doc_id": "txt", "file": "Оліфіренко.txt"}}
+{"time": "2025-11-13T19:41:40.045093", "event": "ingest_done", "payload": {"job_id": "b5a1fc9d257c4d43b6907bea7bd40f1f", "doc_id": "txt", "chunks_added": 84, "total_chunks": 701}}

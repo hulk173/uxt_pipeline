@@ -1,8 +1,9 @@
 from __future__ import annotations
 import argparse, os, json, numpy as np, pandas as pd
 from typing import List, Dict, Set
+
 from uxt_pipeline.embeddings import Embedder, EmbeddingConfig
-from uxt_pipeline.search import VectorIndex, IndexConfig
+from uxt_pipeline.vector_index import VectorIndex, IndexConfig   # <— виправлено
 
 def recall_at_k(ranked: List[int], relevant: Set[int], k: int) -> float:
     return 1.0 if any(i in relevant for i in ranked[:k]) else 0.0

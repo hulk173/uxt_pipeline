@@ -1,33 +1,27 @@
-# uxt_pipeline/storage/export_sqlite.py
-from typing import List
-from uxt_pipeline.models import Chunk
-from uxt_pipeline.utils import ensure_dir
-import sqlite3, json, os
+from __future__ import annotations
+from typing import Sequence, Union, Dict, Any
+import sqlite3
+from pathlib import Path
+from ._coerce import to_dict_like
+from uxt_pipeline.models import Chunk  # type hints
 
-def export_sqlite(chunks: List[Chunk], sqlite_path: str, table: str = "chunks") -> None:
-    ensure_dir(sqlite_path)
-    conn = sqlite3.connect(sqlite_path)
-    cur = conn.cursor()
-    cur.execute(f"""
-        CREATE TABLE IF NOT EXISTS {table}(
-            id TEXT PRIMARY KEY,
-            doc_id TEXT,
-            chunk_id INTEGER,
-            type TEXT,
-            text TEXT,
-            meta TEXT,
-            created_at TEXT
-        )
-    """)
-    cur.executemany(
-        f"INSERT OR REPLACE INTO {table} VALUES (?,?,?,?,?,?,?)",
-        [
-            (
-                c.id, c.doc_id, c.chunk_id, c.type, c.text,
-                json.dumps(c.meta, ensure_ascii=False), c.created_at.isoformat()
-            )
-            for c in chunks
-        ],
-    )
-    conn.commit()
-    conn.close()
+def export_sqlite(chunks: Sequence[Union[Chunk, Dict[str, Any]]], path: str, table: str) -> None:
+    rows = [to_dict_like(ch) for ch in chunks]
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(p))
+    try:
+        if not rows:
+            # все одно створимо пусту таблицю
+            conn.execute(f'CREATE TABLE IF NOT EXISTS "{table}" (id TEXT)')
+            conn.commit()
+            return
+        cols = sorted({k for r in rows for k in r.keys()})
+        col_defs = ", ".join(f'"{c}" TEXT' for c in cols)
+        conn.execute(f'CREATE TABLE IF NOT EXISTS "{table}" ({col_defs});')
+        placeholders = ", ".join("?" for _ in cols)
+        sql = f'INSERT INTO "{table}" ({", ".join(cols)}) VALUES ({placeholders});'
+        conn.executemany(sql, [[str(r.get(c, "")) for c in cols] for r in rows])
+        conn.commit()
+    finally:
+        conn.close()
