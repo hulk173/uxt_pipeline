@@ -497,7 +497,7 @@ with tab_report:
         topic = st.text_area("Тема роботи", value="Метод обробки неструктурованих даних для вдосконалення систем аналізу тексту", height=80, key="rb_topic")
     with cv2:
         student = st.text_input("Студент", value="Оліфіренко Кирило", key="rb_student")
-        group = st.text_input("Група", value="ІН-403", key="rb_group")
+        group = st.text_input("Група", value="6М", key="rb_group")
         specialty = st.text_input("Спеціальність", value="Комп’ютерні науки", key="rb_spec")
         supervisor = st.text_input("Керівник", value="доц. І. І. Прізвище", key="rb_super")
         city = st.text_input("Місто", value="Київ", key="rb_city")
@@ -666,6 +666,6 @@ with tab_hist:
 
 # ============================ FOOTER =============================
 st.markdown(
-    "<div class='footer'>Готово ✅ • Frontend тепер не падає, якщо /job повертає неочікуваний формат. Якщо щось не так з бекендом — побачиш зрозуміле повідомлення.</div>",
+    "<div class='footer'>© 2025 UXT Pipeline — програмний комплекс для обробки неструктурованих даних та вдосконалення систем аналізу тексту. Розроблено в рамках дипломного дослідження.</div>",
     unsafe_allow_html=True,
 )
